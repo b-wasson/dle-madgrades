@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls -la)",
+      "Bash(java -version)",
+      "Bash(mvn -version)",
+      "Bash(npm -v)",
+      "Bash(docker *)",
+      "Read(//usr/lib/**)",
+      "Read(//usr/local/lib/**)",
+      "Bash(apt list *)",
+      "Bash(/usr/sbin/java *)",
+      "Read(//usr/share/maven/bin/**)",
+      "Read(//usr/**)",
+      "Bash(apt-get install *)",
+      "Bash(pacman -Ss maven)",
+      "Bash(pacman -Ql maven)",
+      "Bash(JAVA_HOME=/usr /usr/bin/mvn *)",
+      "Bash(npx --yes create-next-app@latest web --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack)",
+      "Bash(mkdir -p /mnt/c/Users/benja/projects/madgrades-dle/extracted-data)",
+      "Bash(JAVA_HOME=/usr /usr/sbin/java -jar -Xmx4g target/madgrades-final-1.0-SNAPSHOT.jar -reports ../madgrades-data -out ../extracted-data -f CSV)",
+      "Bash(pacman -S --noconfirm libx11)",
+      "Bash(JAVA_HOME=/usr /usr/sbin/java -Djava.awt.headless=true -jar -Xmx4g target/madgrades-final-1.0-SNAPSHOT.jar -reports ../madgrades-data -out ../extracted-data -f CSV)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl -sv http://localhost:3000/)",
+      "Bash(node *)"
+    ]
+  }
+}
