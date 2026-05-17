@@ -4,96 +4,79 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`madgrades-dle` is a new project built on top of UW-Madison grade data. The repository currently contains two source components: The purpose of this project is to use the other two projects to create a website that gives users a daily question about the data. 
+Madgrades DLE is a Next.js 16 web app with two daily games built on UW-Madison grade data:
 
-- `madgrades-extractor/` — Java/Maven CLI that parses UW-Madison registrar PDFs into relational CSV/SQL output
-- `madgrades-data/` — The PDF data source (grade reports and DIR reports from the registrar)
+- **Higher / Lower** (`/`) — Given two courses, pick which has the higher GPA or fail rate
+- **Trivia** (`/trivia`) — 4-option multiple choice from "hardest course in a subject" and campus-wide superlative questions
 
-## madgrades-extractor (Java/Maven)
+Both games have a daily mode (date-seeded, streak tracked in localStorage) and an infinite mode (random, session score only). After answering the daily challenge, aggregate community stats (% correct, total responses) are shown — stored server-side in `web/data/stats.json`.
 
-### Build & Run
+Course data is pre-generated from UW-Madison registrar PDFs via the madgrades-extractor project and lives in `web/src/data/courses.json` (3,816 courses, 187 subjects).
+
+## Web App (`web/`)
+
+### Commands
 
 ```bash
-cd madgrades-extractor
-
-# Build the fat JAR (targets Java 8, requires JDK 17 per CI)
-mvn package
-
-# Run against the local madgrades-data directory
-java -jar -Xmx6g target/madgrades-final-1.0-SNAPSHOT.jar \
-  -reports ../madgrades-data \
-  -out ./output \
-  -f MYSQL
-
-# Extract a single term (e.g. term 1262)
-java -jar target/madgrades-final-1.0-SNAPSHOT.jar \
-  -reports ../madgrades-data \
-  -t 1262 \
-  -out ./output
-
-# List all available term codes
-java -jar target/madgrades-final-1.0-SNAPSHOT.jar \
-  -reports ../madgrades-data \
-  -l
+cd web
+npm run dev      # development server (Next.js 16 + Turbopack)
+npm run build    # production build
+npm run lint     # ESLint
+npx tsc --noEmit # type-check without building
 ```
-
-CI runs `mvn package` on push to `master` and uploads the JAR as an artifact.
 
 ### Architecture
 
-The extraction pipeline runs per-term:
+Pages are server components that generate the daily question deterministically from the date seed, then pass all course data and the pre-computed daily question as props to client components.
 
-1. **`Scrapers`** — scans `madgrades-data/dir/` and `madgrades-data/grades/` directories, parses filenames (`{termCode}-dir.pdf`, `{termCode}-grades.pdf`) to build a map of term code → file path.
+```
+app/
+  page.tsx              # Higher/Lower landing page — server component
+  trivia/page.tsx       # Trivia page — server component
+  api/stats/route.ts    # GET/POST aggregate daily stats (reads/writes data/stats.json)
+  layout.tsx            # Root layout with Nav
+  globals.css           # Theme tokens (@theme), hover/tap CSS classes
 
-2. **`Pdfs`** — uses [tabula-java](https://github.com/tabulapdf/tabula-java) to extract rows from PDFs using hardcoded column x-coordinates defined in `Constants`. Column layouts differ by term code (special cases for 1124 and ≥1204 for DIR; 1224 for grades).
+components/
+  HigherLowerGame.tsx   # Full H/L game — client component
+  TriviaGame.tsx        # Full trivia game — client component
+  CommunityBar.tsx      # Two-tone % bar shown after daily answer
+  Nav.tsx               # Top nav with active-route highlighting
 
-3. **`Parse`** — converts raw `PdfRow` objects into typed entry objects:
-   - `dirEntry()` → `SubjectCodeEntry`, `SubjectNameEntry`, or `SectionEntry`
-   - `gradeEntry()` → `SubjectCodeEntry`, `SubjectAbbrevEntry`, `CourseNameEntry`, or `SectionGradesEntry`
+lib/
+  types.ts              # Shared TypeScript interfaces (Course, HLPair, TriviaQuestion, …)
+  seed.ts               # getDailyKey(), getDailySeed(), makeSeededRandom()
+  questions.ts          # generateHLPair(), generateTriviaQuestion() — pure functions
+  storage.ts            # localStorage read/write for streaks and daily completion state
+  stats.ts              # Server-side fs read/write for data/stats.json (used by API route only)
+  api.ts                # Client-side fetch helpers for /api/stats
 
-4. **`Term`** — accumulates sections from DIR entries and grade data from grade entries. `Term.generateCourseOfferings()` cross-lists courses by matching sections across subjects.
-
-5. **`TermReports`** — holds all terms; `generateTables()` assembles the full relational output using `Mappers` static functions, deduplicating instructors, schedules, and rooms by UUID/ID.
-
-6. **`Exporters`** — writes `Multimap<String, Map<String, Object>>` (table name → rows) to either CSV (`opencsv`) or MySQL INSERT statements.
-
-### Database Schema
-
-Output tables (defined in `src/main/resources/mysql_create_tables.sql`):
-
-- `courses` — unique course by UUID (stable across terms), number, name
-- `course_offerings` — a course in a specific term; linked to `courses`
-- `sections` — individual sections within an offering (lecture, discussion, lab)
-- `grade_distributions` — per-section grade counts (A, AB, B, BC, C, D, F, S, U, CR, N, P, I, NW, NR, OTHER) and computed GPA
-- `instructors`, `teachings` — who taught each section
-- `schedules`, `rooms` — meeting time/location, deduplicated by UUID
-- `subjects`, `subject_memberships` — subject areas (e.g. "Computer Sciences / COMP SCI") linked to offerings
-
-### Static Resources
-
-- `aefis_courses.csv` — maps subject abbreviation + course number → full course name (loaded at startup to enrich course records)
-- `subject_areas.csv` — canonical subject code/abbreviation/name list
-
-## madgrades-data (PDF Data Source)
-
-PDFs are organized as:
-- `grades/{termCode}-grades.pdf` — percentage grade distribution reports
-- `dir/{termCode}-dir.pdf` — Final Department Instructional Reports
-
-Term codes end in `2` (spring), `4` (fall), or `6` (summer). Summer terms have no grade reports.
-
-### Data Pipeline (Docker)
-
-```bash
-# Build: clones madgrades-extractor, builds it, runs extraction
-docker build -t madgrades-data ./madgrades-data
-
-# Run: outputs SQL table files to a local directory
-docker run -v /path/to/output:/mnt madgrades-data
+src/data/
+  courses.json          # Pre-generated course data — do not edit by hand
 ```
 
-On push to `main`, CI builds and pushes `ghcr.io/madgrades/madgrades-data:latest`, then dispatches a `submodule-updated` event to the downstream `Madgrades/reports` repo.
+### Key Design Decisions
 
-### Adding a New Semester
+**Hydration**: All client component state initializes to the server-safe default (`'playing'`, `null`, `{ streak: 0, bestStreak: 0 }`). A single `useEffect` on mount reads localStorage and updates state — this prevents SSR/client HTML mismatches.
 
-Add `{termCode}-grades.pdf` to `madgrades-data/grades/` and `{termCode}-dir.pdf` to `madgrades-data/dir/`, then submit a PR. An administrator must merge to trigger the pipeline.
+**Daily seeding**: `getDailySeed()` returns an integer from the current date (`YYYYMMDD`). H/L uses `seed + 1`, trivia uses `seed + 2` so they never pick the same random sequence.
+
+**Community stats**: Stored in `web/data/stats.json` as `{ "hl:2026-05-17": { total, correct }, … }`. The API route writes atomically (tmp file → rename). Only recorded for daily mode — infinite questions aren't shared across users.
+
+**CSS**: Tailwind v4 (`@import "tailwindcss"`, `@theme` block for custom tokens). Hover/tap effects are in `globals.css` as `.hl-card`, `.trivia-option`, `.action-btn` classes since inline styles can't express pseudo-selectors.
+
+### Course Data Shape
+
+```ts
+interface Course {
+  uuid: string
+  name: string
+  number: number
+  subjectCode: string   // numeric registrar code
+  subjectName: string   // e.g. "Computer Sciences"
+  subjectAbbrev: string // e.g. "COMP SCI"
+  avgGpa: number        // weighted avg across all terms/sections
+  failRate: number      // F count / total graded students
+  totalStudents: number
+}
+```
