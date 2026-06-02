@@ -7,16 +7,9 @@ Two daily games built on UW-Madison grade data from [Madgrades](https://madgrade
 
 Both games have a **daily mode** (date-seeded, streak tracked in localStorage) and an **infinite mode** (random, session score only). After a daily answer, aggregate community stats (% correct, total responses) are shown.
 
-## Getting started
+## Play Now
 
-```bash
-cd web
-npm install
-npm run dev   # http://localhost:3000
-```
-
-> **WSL note:** if you get a `lightningcss.linux-x64-gnu.node` error, run:
-> `npm install lightningcss-linux-x64-gnu`
+https://maddle.benwasson.com
 
 ## Stack
 
