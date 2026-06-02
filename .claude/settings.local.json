@@ -27,7 +27,8 @@
       "Bash(curl -s http://localhost:3000)",
       "Bash(curl -sv http://localhost:3000/)",
       "Bash(node *)",
-      "Bash(npm audit *)"
+      "Bash(npm audit *)",
+      "Bash(npm install *)"
     ]
   }
 }
