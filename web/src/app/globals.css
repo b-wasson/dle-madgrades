@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+  --color-uw-red: #c5050c;
+  --color-uw-red-dark: #8b0000;
+  --color-surface: #161616;
+  --color-surface-raised: #1e1e1e;
+  --color-border: #282828;
+  --color-muted: #666666;
+  --color-win: #16a34a;
+}
+
+:root {
+  --background: #0f0f0f;
+  --foreground: #f0f0f0;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+/* Higher/Lower cards */
+.hl-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.2s ease;
+}
+
+.hl-card:not([disabled]):hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  border-color: #3a3a3a !important;
+}
+
+/* Trivia option buttons */
+.trivia-option {
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+.trivia-option:not([disabled]):hover {
+  transform: translateY(-1px);
+  border-color: #3a3a3a !important;
+}
+
+/* Mode tab buttons */
+.mode-tab {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+/* Action buttons */
+.action-btn {
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.action-btn:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+}
